@@ -1,0 +1,353 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>Three.JS Test - Machina</title>
+    <style type="text/css">
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #threeMenu {
+            z-index: 3;
+            background-color: rgba(63, 81, 181, 0.5);
+            right: 0;
+            top: 0;
+            position: absolute;
+            color: white;
+            text-align: center;
+            padding-left: 10px;
+            padding-right: 10px;
+            line-height: 16pt;
+            font-size: 14pt;
+            font-family: "Arial";
+            height: 60px;
+            overflow: hidden;
+            -webkit-transition: all 1s ease-in-out;
+            transition: height 1s;
+        }
+
+            #threeMenu * {
+                display: inline-block;
+                vertical-align: middle;
+            }
+
+            #threeMenu:hover {
+                height: 650px;
+            }
+
+        #threeScene {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        #threeFPS {
+            position: absolute;
+            width: auto;
+            height: auto;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+    </style>
+    <script src="three.js" type="text/javascript"></script>
+    <script src="stats.min.js" type="text/javascript"></script>
+    <script src="helvetiker_regular.typeface.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        var width = window.innerWidth;
+        var height = window.innerHeight;
+        var colorList = ["black", "white", "gray"];
+        var moveUp = false;
+        var moveDown = false;
+        var moveLeft = false;
+        var moveRight = false;
+        var zoomIn = false;
+        var zoomOut = false;
+        var rotationConst = 0.05;
+
+        var earthOrbitSpeed = 0.00365;
+        var earthOrbitSize = 1495;
+        var earthRotation = 0.024;
+        var earthSize = 80;
+
+        var autoCamera = true;
+
+        function onLoad() {
+
+            console.log(width, height);
+            var stats = new Stats();
+            stats.setMode(2);
+            document.querySelector("#threeFPS").appendChild(stats.domElement);
+            var scene = new THREE.Scene();
+            var camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 65535);
+            var renderer = new THREE.WebGLRenderer();
+            renderer.setSize(width, height);
+            var planetId = 0;
+            var vectorPoint = new THREE.Vector3(0, 0, 0);
+
+            var planetMeshes = [];
+            var orbitMeshes = [];
+
+            var skyboxGeometry = new THREE.SphereGeometry(50000, 256, 256);
+
+            skyboxTextures = [new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/sky.jpg") })];
+
+            //for(i=0; i<6; i++)
+            //    skyboxTextures.push();
+
+            var skyFaceMaterial = new THREE.MeshFaceMaterial(skyboxTextures);
+
+            var skybox = new THREE.Mesh(skyboxGeometry, skyFaceMaterial);
+
+            skybox.position.set(0, 0, 0);
+            scene.add(skybox);
+
+            document.querySelector("#threeScene").appendChild(renderer.domElement);
+
+            stats.begin();
+
+            camera.position.x = 0;
+            camera.position.y = 0;
+            camera.position.z = 700;
+            camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+            var planets = [];
+
+            planets.push({
+                name: "Sun",
+                size: 5 * earthSize,
+                geometry: new THREE.SphereGeometry(5 * earthSize, 128, 128),
+                position: { x: 0, z: 0 },
+                texture: [new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/sun.jpg") })],
+                rotation: earthRotation / 25,
+                orbitSpeed: 0,
+                orbitSize: 0
+            }, {
+                name: "Mercury",
+                size: 0.3825 * earthSize,
+                geometry: new THREE.SphereGeometry(0.3825 * earthSize, 128, 128),
+                position: { x: 0.3871 * earthOrbitSize, z: 0 },
+                texture: [new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/mercury.jpg") })],
+                rotation: earthRotation / 58,
+                orbitSpeed: earthOrbitSpeed / 0.2408,
+                orbitSize: earthOrbitSize * 0.3825
+            }, {
+                name: "Venus",
+                size: 0.9484 * earthSize,
+                geometry: new THREE.SphereGeometry(0.9484 * earthSize, 128, 128),
+                position: { x: 0.7233 * earthOrbitSize, z: 0 },
+                texture: [new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/venus.jpg") })],
+                rotation: earthRotation / 243,
+                orbitSpeed: earthOrbitSpeed / 0.6152,
+                orbitSize: earthOrbitSize * 0.7233
+            }, {
+                name: "Earth",
+                size: earthSize,
+                geometry: new THREE.SphereGeometry(earthSize, 128, 128),
+                position: { x: earthOrbitSize, z: 0 },
+                texture: [new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/earth.png") })],
+                rotation: earthRotation,
+                orbitSpeed: earthOrbitSpeed,
+                orbitSize: earthOrbitSize
+            }, {
+                name: "Mars",
+                size: 0.5335 * earthSize,
+                geometry: new THREE.SphereGeometry(0.5335 * earthSize, 128, 128),
+                position: { x: 1.5237 * earthOrbitSize, z: 0 },
+                texture: [new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/mars.jpg") })],
+                rotation: earthRotation * 2.4,
+                orbitSpeed: earthOrbitSpeed / 1.8808,
+                orbitSize: earthOrbitSize * 1.5237
+            }, {
+                name: "Jupiter",
+                size: 11.2 * earthSize,
+                geometry: new THREE.SphereGeometry(11.2 * earthSize, 128, 128),
+                position: { x: 5.2034 * earthOrbitSize, z: 0 },
+                texture: [new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/jupiter.jpg") })],
+                rotation: earthRotation / 0.41,
+                orbitSpeed: earthOrbitSpeed / 11.8637,
+                orbitSize: earthOrbitSize * 5.2034
+            }, {
+                name: "Saturn",
+                size: 9.44 * earthSize,
+                geometry: new THREE.SphereGeometry(9.44 * earthSize, 128, 128),
+                position: { x: 9.53 * earthOrbitSize, z: 0 },
+                texture: [new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/saturn.jpg") })],
+                rotation: earthRotation / 0.41,
+                orbitSpeed: earthOrbitSpeed / 29.44,
+                orbitSize: earthOrbitSize * 9.5371
+            }, {
+                name: "Uranus",
+                size: 4 * earthSize,
+                geometry: new THREE.SphereGeometry(4 * earthSize, 128, 128),
+                position: { x: 19.1913 * earthOrbitSize, z: 0 },
+                texture: [new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/uranus.jpg") })],
+                rotation: earthRotation / 0.71,
+                orbitSpeed: earthOrbitSpeed / 84.07,
+                orbitSize: earthOrbitSize * 19.1913
+            }, {
+                name: "Neptune",
+                size: 3.8827 * earthSize,
+                geometry: new THREE.SphereGeometry(3.8827 * earthSize, 128, 128),
+                position: { x: 30.069 * earthOrbitSize, z: 0 },
+                texture: [new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/neptune.jpg") })],
+                rotation: earthRotation / 0.67,
+                orbitSpeed: earthOrbitSpeed / 164.8799,
+                orbitSize: earthOrbitSize * 30.069
+            }, {
+                name: "SaturnRings",
+                size: 9.5 * earthSize,
+                geometry: new THREE.RingGeometry(9.5 * earthSize, 11 * earthSize, 128, 128),
+                position: { x: 9.53 * earthOrbitSize, z: 0 },
+                texture: [new THREE.MeshBasicMaterial({ color: 0xE07F00 })],
+                rotation: earthRotation / 0.41,
+                orbitSpeed: earthOrbitSpeed / 29.45,
+                orbitSize: earthOrbitSize * 9.5371
+            });
+
+            for (i = 0; i < planets.length; i++) {
+                console.log("Tworzenie obiektu", planets[i].name);
+                var orbit = new THREE.Object3D();
+                var planet = new THREE.Mesh(planets[i].geometry, new THREE.MeshFaceMaterial(planets[i].texture));
+                planet.position.set(planets[i].position.x, 0, planets[i].position.z);
+                if (planets[i].name != "Sun" || planets[i].name != "SaturnRings") {
+                    var orbitGeometry = new THREE.TorusGeometry(planets[i].orbitSize, 1, 64, 128);
+                    var orbitMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color("#a0a0a0") });
+                    var orbitTrack = new THREE.Mesh(orbitGeometry, orbitMaterial);
+                    orbitTrack.rotateX(Math.PI / 2);
+                    orbit.add(orbitTrack);
+                }
+
+                if (planets[i].name == "SaturnRings") {
+                    planet.rotateX(Math.PI / 4);
+                }
+                planetMeshes.push(planet);
+                orbitMeshes.push(orbit);
+                orbit.add(planet);
+                scene.add(orbit);
+            }
+
+            console.log(planetMeshes);
+            scene.updateMatrixWorld(true);
+
+            document.addEventListener("keydown", onKeyDown, false);
+            document.addEventListener("keyup", onKeyUp, false);
+
+            function onKeyDown(event) {
+                var keyCode = event.which;
+
+                switch (keyCode) {
+                    case 38:    // Strzałka w górę
+                        moveUp = true;
+                        break;
+                    case 40:    // Strzałka w dół
+                        moveDown = true;
+                        break;
+                    case 37:    // Strzałka w lewo
+                        moveLeft = true;
+                        break;
+                    case 39:    // Strzałka w prawo
+                        moveRight = true;
+                        break;
+                        //case 16:    // Lewy Shift
+                        //    zoomIn = true;
+                        //    break;
+                        //case 17:    // Lewy Control
+                        //    zoomOut = true;
+                        //    break;
+                }
+
+                autoCamera = false;
+            }
+
+            function onKeyUp(event) {
+                moveUp = false;
+                moveDown = false;
+                moveLeft = false;
+                moveRight = false;
+                zoomIn = false;
+                zoomOut = false;
+            }
+
+            function onPlanetChange(e) {
+                var pid = e.target.getAttribute("data-id");
+                planetId = pid;
+                console.log(planets[planetId].name);
+
+                vectorPoint = new THREE.Vector3(planets[planetId].position.x, 0, 0);
+
+                autoCamera = true;
+            }
+
+            function animateScene() {
+                if (moveUp) camera.position.y += 2;
+                if (moveDown) camera.position.y -= 2;
+
+                if (moveRight) {
+                    var x = camera.position.x;
+                    var z = camera.position.z;
+                    camera.position.x = x * Math.cos(rotationConst) - z * Math.sin(rotationConst);
+                    camera.position.z = z * Math.cos(rotationConst) + x * Math.sin(rotationConst);
+                }
+
+                if (moveLeft) {
+                    var x = camera.position.x;
+                    var z = camera.position.z;
+                    camera.position.x = x * Math.cos(rotationConst) + z * Math.sin(rotationConst);
+                    camera.position.z = z * Math.cos(rotationConst) - x * Math.sin(rotationConst);
+                }
+
+                for (i = 0; i < planetMeshes.length; i++) {
+                    if (planets[i].name != "SaturnRings") {
+                        planetMeshes[i].rotateY(-planets[i].rotation);
+                        orbitMeshes[i].rotateY(-planets[i].orbitSpeed);
+                    }
+                }
+
+                if (autoCamera) {
+                    camera.position.setFromMatrixPosition(planetMeshes[planetId].matrixWorld);
+                    camera.position.setZ(camera.position.z + (2 * planets[planetId].size));
+                    camera.position.setY(2 * planets[planetId].size);
+                }
+                camera.lookAt(new THREE.Vector3().setFromMatrixPosition(planetMeshes[planetId].matrixWorld));
+                camera.updateProjectionMatrix();
+                camera.updateMatrixWorld(true);
+                renderer.render(scene, camera);
+                stats.update();
+                requestAnimationFrame(animateScene);
+
+            }
+            console.log("Renderowanie pierwszej klatki...");
+            animateScene();
+            console.log("Pierwsza klatka wyrenderowana");
+            planetBtns = document.getElementsByClassName("planet");
+            for (i = 0; i < planetBtns.length; i++)
+                planetBtns[i].addEventListener("click", onPlanetChange, false);
+        }
+
+        window.addEventListener("load", onLoad, false);
+    </script>
+</head>
+<body>
+    <div id="threeFPS"></div>
+    <div id="threeScene"></div>
+    <div id="threeMenu">
+        <p><strong>Układ słoneczny</strong></p><br />
+        <p class="planet" data-id="0">Słońce</p><br />
+        <p class="planet" data-id="1">Merkury</p><br />
+        <p class="planet" data-id="2">Wenus</p><br />
+        <p class="planet" data-id="3">Ziemia</p><br />
+        <p class="planet" data-id="4">Mars</p><br />
+        <p class="planet" data-id="5">Jowisz</p><br />
+        <p class="planet" data-id="6">Saturn</p><br />
+        <p class="planet" data-id="7">Uran</p><br />
+        <p class="planet" data-id="8">Neptun</p>
+    </div>
+</body>
+</html>
