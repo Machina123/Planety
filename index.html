@@ -78,6 +78,9 @@
 
         var autoCamera = true;
 
+        var planetMeshes = [];
+        var orbitMeshes = [];
+
         function onLoad() {
 
             console.log(width, height);
@@ -91,8 +94,7 @@
             var planetId = 0;
             var vectorPoint = new THREE.Vector3(0, 0, 0);
 
-            var planetMeshes = [];
-            var orbitMeshes = [];
+
 
             var skyboxGeometry = new THREE.SphereGeometry(50000, 256, 256);
 
@@ -107,6 +109,8 @@
 
             skybox.position.set(0, 0, 0);
             scene.add(skybox);
+
+            scene.add(new THREE.AxisHelper(10000));
 
             document.querySelector("#threeScene").appendChild(renderer.domElement);
 
@@ -209,6 +213,15 @@
                 rotation: earthRotation / 0.41,
                 orbitSpeed: earthOrbitSpeed / 29.45,
                 orbitSize: earthOrbitSize * 9.5371
+            }, {
+                name: "MoonRotator",
+                size: earthSize / 2,
+                geometry: new THREE.SphereGeometry(earthSize / 2, 128, 128),
+                position: { x: earthOrbitSize, z: 0 },
+                texture: [new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/earth.png") })],
+                rotation: earthRotation / 10 ,
+                orbitSpeed: earthOrbitSpeed,
+                orbitSize: earthOrbitSize
             });
 
             for (i = 0; i < planets.length; i++) {
@@ -228,10 +241,19 @@
                     planet.rotateX(Math.PI / 4);
                 }
                 planetMeshes.push(planet);
-                orbitMeshes.push(orbit);
                 orbit.add(planet);
+                orbitMeshes.push(orbit);
                 scene.add(orbit);
             }
+
+            var moonGeo = new THREE.SphereGeometry(0.2725 * earthSize, 128, 128);
+            var moonMat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/moon.jpg") });
+
+            var moonMesh = new THREE.Mesh(moonGeo, moonMat);
+            var moonObj = new THREE.Object3D();
+            moonObj.add(moonMesh);
+            
+            planetMeshes[10].add(moonObj);
 
             console.log(planetMeshes);
             scene.updateMatrixWorld(true);
@@ -315,6 +337,12 @@
                     camera.position.setZ(camera.position.z + (2 * planets[planetId].size));
                     camera.position.setY(2 * planets[planetId].size);
                 }
+
+
+                planetMeshes[10].children[0].position.set((earthSize / 2) + 125, planetMeshes[3].position.y, planetMeshes[3].position.z);
+                planetMeshes[10].children[0].updateMatrixWorld(true);
+                //planetMeshes[10].children[0].rotateY(- Math.PI / 180);
+
                 camera.lookAt(new THREE.Vector3().setFromMatrixPosition(planetMeshes[planetId].matrixWorld));
                 camera.updateProjectionMatrix();
                 camera.updateMatrixWorld(true);
