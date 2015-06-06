@@ -69,6 +69,7 @@
         var moveRight = false;
         var zoomIn = false;
         var zoomOut = false;
+        var zoomConst = 0.05;
         var rotationConst = 0.05;
 
         var earthOrbitSpeed = 0.00365;
@@ -88,12 +89,12 @@
             stats.setMode(2);
             document.querySelector("#threeFPS").appendChild(stats.domElement);
             var scene = new THREE.Scene();
-            var camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 65535);
+            var camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100000);
             var renderer = new THREE.WebGLRenderer();
             renderer.setSize(width, height);
             var planetId = 0;
             var vectorPoint = new THREE.Vector3(0, 0, 0);
-
+            var cameraHeight;
 
 
             var skyboxGeometry = new THREE.SphereGeometry(50000, 256, 256);
@@ -110,7 +111,7 @@
             skybox.position.set(0, 0, 0);
             scene.add(skybox);
 
-            scene.add(new THREE.AxisHelper(10000));
+            //scene.add(new THREE.AxisHelper(10000));
 
             document.querySelector("#threeScene").appendChild(renderer.domElement);
 
@@ -120,6 +121,8 @@
             camera.position.y = 0;
             camera.position.z = 700;
             camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+            cameraHeight = 0;
 
             var planets = [];
 
@@ -205,21 +208,12 @@
                 orbitSpeed: earthOrbitSpeed / 164.8799,
                 orbitSize: earthOrbitSize * 30.069
             }, {
-                name: "SaturnRings",
-                size: 9.5 * earthSize,
-                geometry: new THREE.RingGeometry(9.5 * earthSize, 11 * earthSize, 128, 128),
-                position: { x: 9.53 * earthOrbitSize, z: 0 },
-                texture: [new THREE.MeshBasicMaterial({ color: 0xE07F00 })],
-                rotation: earthRotation / 0.41,
-                orbitSpeed: earthOrbitSpeed / 29.45,
-                orbitSize: earthOrbitSize * 9.5371
-            }, {
                 name: "MoonRotator",
                 size: earthSize / 2,
                 geometry: new THREE.SphereGeometry(earthSize / 2, 128, 128),
                 position: { x: earthOrbitSize, z: 0 },
                 texture: [new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: THREE.ImageUtils.loadTexture("materials/earth.png") })],
-                rotation: earthRotation / 10 ,
+                rotation: earthRotation / 10,
                 orbitSpeed: earthOrbitSpeed,
                 orbitSize: earthOrbitSize
             });
@@ -252,8 +246,8 @@
             var moonMesh = new THREE.Mesh(moonGeo, moonMat);
             var moonObj = new THREE.Object3D();
             moonObj.add(moonMesh);
-            
-            planetMeshes[10].add(moonObj);
+
+            planetMeshes[9].add(moonObj);
 
             console.log(planetMeshes);
             scene.updateMatrixWorld(true);
@@ -273,19 +267,20 @@
                         break;
                     case 37:    // Strzałka w lewo
                         moveLeft = true;
+                        autoCamera = false;
                         break;
                     case 39:    // Strzałka w prawo
                         moveRight = true;
+                        autoCamera = false;
                         break;
-                        //case 16:    // Lewy Shift
-                        //    zoomIn = true;
-                        //    break;
-                        //case 17:    // Lewy Control
-                        //    zoomOut = true;
-                        //    break;
+                    case 16:    // Lewy Shift
+                        zoomIn = true;
+                        break;
+                    case 17:    // Lewy Control
+                        zoomOut = true;
+                        break;
                 }
 
-                autoCamera = false;
             }
 
             function onKeyUp(event) {
@@ -308,21 +303,37 @@
             }
 
             function animateScene() {
-                if (moveUp) camera.position.y += 2;
-                if (moveDown) camera.position.y -= 2;
+                if (moveUp) {
+                    camera.position.y += 2;
+                    cameraHeight += 2;
+                }
 
-                if (moveRight) {
+                if (moveDown) {
+                    camera.position.y -= 2;
+                    cameraHeight -= 2;
+                }
+
+
+                if (moveLeft) {
                     var x = camera.position.x;
                     var z = camera.position.z;
                     camera.position.x = x * Math.cos(rotationConst) - z * Math.sin(rotationConst);
                     camera.position.z = z * Math.cos(rotationConst) + x * Math.sin(rotationConst);
                 }
 
-                if (moveLeft) {
+                if (moveRight) {
                     var x = camera.position.x;
                     var z = camera.position.z;
                     camera.position.x = x * Math.cos(rotationConst) + z * Math.sin(rotationConst);
                     camera.position.z = z * Math.cos(rotationConst) - x * Math.sin(rotationConst);
+                }
+
+                if (zoomIn) {
+                    camera.zoom += (camera.zoom > 3 ? 0 : zoomConst);
+                }
+
+                if (zoomOut) {
+                    camera.zoom -= (camera.zoom < 0.39 ? 0 : zoomConst);
                 }
 
                 for (i = 0; i < planetMeshes.length; i++) {
@@ -335,12 +346,12 @@
                 if (autoCamera) {
                     camera.position.setFromMatrixPosition(planetMeshes[planetId].matrixWorld);
                     camera.position.setZ(camera.position.z + (2 * planets[planetId].size));
-                    camera.position.setY(2 * planets[planetId].size);
+                    camera.position.setY(cameraHeight);
                 }
 
 
-                planetMeshes[10].children[0].position.set((earthSize / 2) + 125, planetMeshes[3].position.y, planetMeshes[3].position.z);
-                planetMeshes[10].children[0].updateMatrixWorld(true);
+                planetMeshes[9].children[0].position.set((earthSize / 2) + 125, planetMeshes[3].position.y, planetMeshes[3].position.z);
+                planetMeshes[9].children[0].updateMatrixWorld(true);
                 //planetMeshes[10].children[0].rotateY(- Math.PI / 180);
 
                 camera.lookAt(new THREE.Vector3().setFromMatrixPosition(planetMeshes[planetId].matrixWorld));
